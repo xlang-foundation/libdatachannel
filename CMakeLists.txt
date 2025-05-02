@@ -26,6 +26,7 @@ option(WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 option(CAPI_STDCALL "Set calling convention of C API callbacks stdcall" OFF)
 option(SCTP_DEBUG "Enable SCTP debugging output to verbose log" OFF)
 option(RTC_UPDATE_VERSION_HEADER "Enable updating the version header" OFF)
+option(USE_XLANG  "Enable XLang bindings" ON)
 
 if (USE_GNUTLS AND USE_MBEDTLS)
 	message(FATAL_ERROR "Both USE_MBEDTLS and USE_GNUTLS cannot be enabled at the same time")
@@ -50,6 +51,17 @@ if(NOT WARNINGS_AS_ERRORS AND NOT USE_SYSTEM_SRTP)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
+
+# ——— XLang support ————————————————————————————————————————————————————
+if(USE_XLANG)
+    find_package(xlang REQUIRED)
+    set(xlang_sdk_folder "${XLANG_INCLUDE_DIR}")
+    include_directories(${xlang_sdk_folder})
+    file(GLOB XLANG_API_SRC "${xlang_sdk_folder}/value.cpp")
+	file(GLOB XLANG_BIND_SRC "${CMAKE_CURRENT_SOURCE_DIR}/xlangbinding/*.cpp")
+endif()
+
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if(WIN32)
@@ -202,6 +214,12 @@ set(LIBDATACHANNEL_IMPL_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/impl/wshandshake.hpp
 )
 
+# Append the XLang-binding sources if requested
+if(USE_XLANG)
+    list(APPEND LIBDATACHANNEL_SOURCES ${XLANG_API_SRC})
+	list(APPEND LIBDATACHANNEL_SOURCES ${XLANG_BIND_SRC})
+endif()
+
 set(TESTS_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/connectivity.cpp
@@ -344,6 +362,7 @@ target_link_libraries(datachannel-static PRIVATE
 	Threads::Threads
 	Usrsctp::Usrsctp
 	$<BUILD_INTERFACE:plog::plog>)
+
 
 if(WIN32)
 	target_link_libraries(datachannel PUBLIC ws2_32) # winsock2

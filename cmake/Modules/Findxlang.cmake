@@ -1,6 +1,6 @@
 
 FIND_PATH(XLANG_INCLUDE_DIR NAMES "xlang.h"
-                           PATHS ../xlang/Api ../../XF/xlang/Api
+                           PATHS deps/xlang/Api
                            ENV INCLUDE DOC "Directory containing xlang.h include file")
 
 
