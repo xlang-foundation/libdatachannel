@@ -1,5 +1,4 @@
-import webrtc
-
+from datachannel import webrtc
 options = {
 	iceServers = [
 		{
