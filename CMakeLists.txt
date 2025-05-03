@@ -593,6 +593,10 @@ if(NOT NO_TESTS)
 	target_link_libraries(datachannel-benchmark datachannel Threads::Threads)
 endif()
 
+if(USE_XLANG)
+	add_subdirectory(deps/xlang)
+endif()
+
 # Examples
 if(NOT NO_EXAMPLES)
 	set(JSON_BuildTests OFF CACHE INTERNAL "")
