@@ -29,26 +29,31 @@ class DataChannel {
 
 public:
 	DataChannel();
-	void Set(std::shared_ptr<rtc::DataChannel> dc);
+	void Set(std::shared_ptr<rtc::PeerConnection> pc,std::shared_ptr<rtc::DataChannel> dc);
 	~DataChannel();
 
 	bool Send(const std::string &message);
 	void Close();
 	void OnMessageCallback(X::XRuntime *rt, X::XObj *pContext, X::Value callback);
+	X::Value LocalDescription();
 
 private:
+	std::shared_ptr<rtc::PeerConnection> m_pc;
 	std::shared_ptr<rtc::DataChannel> m_dc;
 	X::Value m_messageCallback;
+	std::string m_cachedLocalSDP; // stored once negotiation fires
+	std::string m_cachedSDPType;  // "offer" or "answer"
 };
 
 class Manager : public Singleton<Manager> {
 	X::Value m_curModule;
 
 	BEGIN_PACKAGE(Manager)
-	// Create a new DataChannel with label and options
-	APISET().AddRTFunc<2>("create", &Manager::Create);
-	// Set default ICE servers/options
-	APISET().AddRTFunc<1>("setDefaultOptions", &Manager::SetDefaultOptions);
+		// Create a new DataChannel with label and options
+		APISET().AddRTFunc<2>("create", &Manager::Create);
+		// Set default ICE servers/options
+		APISET().AddRTFunc<1>("setDefaultOptions", &Manager::SetDefaultOptions);
+		APISET().AddClass<0, DataChannel>("DataChannel");
 	END_PACKAGE
 
 public:

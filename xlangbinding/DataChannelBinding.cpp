@@ -7,8 +7,17 @@ namespace LibDataChannel {
 // DataChannel implementation
 DataChannel::DataChannel(){}
 
-void DataChannel::Set(std::shared_ptr<rtc::DataChannel> dc) {
+void DataChannel::Set(std::shared_ptr<rtc::PeerConnection> pc,
+	std::shared_ptr<rtc::DataChannel> dc) {
+	m_pc = pc;
 	m_dc = dc;
+
+	/* capture the SDP as soon as libdatachannel produces it */
+	m_pc->onLocalDescription([this](rtc::Description desc) {
+		m_cachedLocalSDP = std::string(desc);                          // SDP text
+		m_cachedSDPType = rtc::Description::typeToString(desc.type()); // "offer"/"answer"
+	});
+
 	m_dc->onMessage([this](rtc::message_variant message) {
 		if (!m_messageCallback.IsObject())
 			return;
@@ -54,6 +63,21 @@ void DataChannel::OnMessageCallback(X::XRuntime *rt, X::XObj *pContext, X::Value
 	m_messageCallback = callback;
 }
 
+X::Value DataChannel::LocalDescription() 
+{ 
+      if (m_cachedLocalSDP.empty())
+		return X::Value(); // not ready yet – negotiate first
+
+	// Pack the SDP + type the same way browsers expect it
+	X::Dict j;
+	j["type"] = m_cachedSDPType;
+	j["sdp"] = m_cachedLocalSDP;
+
+	// Base-64 for easy copy/paste
+	std::string descr = j.ToString();
+	return X::Value(descr);
+}
+
 // Manager implementation
 X::Value Manager::Create(X::XRuntime *rt, X::XObj *pContext, std::string label, X::Value options) {
 	rtc::Configuration config;
@@ -87,7 +111,7 @@ X::Value Manager::Create(X::XRuntime *rt, X::XObj *pContext, std::string label, 
 
 	X::XPackageValue<DataChannel> valDC;
 	DataChannel& x_dc = *valDC;
-	x_dc.Set(dc);
+	x_dc.Set(pc,dc);
 	return X::Value(valDC);
 }
 

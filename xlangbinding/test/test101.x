@@ -13,6 +13,7 @@ options = {
 }
 
 dc = webrtc.create("test", options)
+
 def OnMessage(evt):
 	print("Received message:", evt.data)
 	# Send a response back
