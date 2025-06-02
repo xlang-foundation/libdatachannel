@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+    <head>
+		<meta charset="UTF-8">
+        <title>WebRTC Example</title>
+		<link rel="stylesheet" href="style.css">
+        <script src="client.js"></script>
+    </head>
+	<body>
+		<h1>WebRTC Example</h1>
+		<h2>RemoteDescription:</h2>
+		<textarea id="RDId" style="width:200px;height:300px;"></textarea>
+		<input type="button" id="RDBtn" value="setRemoteDescription">
+		<br>
+		<h2>Answer Description</h2>
+		<pre id="answer-sdp"></pre>
+		<br>
+		<h2>Send a message through DataChannel</h2>
+		<input type="text" id="sendMsg" placeholder="message" disabled>
+		<input type="button" id="sendBtn" value="Send" disabled>
+		<br>
+	</body>
+</html>
+

@@ -25,6 +25,8 @@ class DataChannel {
 	APISET().AddFunc<1>("send", &DataChannel::Send);
 	APISET().AddFunc<0>("close", &DataChannel::Close);
 	APISET().AddRTFunc<1>("onmessage", &DataChannel::OnMessageCallback);
+	APISET().AddFunc<1>("setRemoteDescription", &DataChannel::SetRemoteDescription);
+	APISET().AddFunc<1>("addRemoteCandidate", &DataChannel::AddRemoteCandidate);
 	END_PACKAGE
 
 public:
@@ -36,6 +38,8 @@ public:
 	void Close();
 	void OnMessageCallback(X::XRuntime *rt, X::XObj *pContext, X::Value callback);
 	X::Value LocalDescription();
+	bool SetRemoteDescription(const std::string &sdp);
+	bool AddRemoteCandidate(const std::string &candidate);
 
 private:
 	std::shared_ptr<rtc::PeerConnection> m_pc;
@@ -50,7 +54,7 @@ class Manager : public Singleton<Manager> {
 
 	BEGIN_PACKAGE(Manager)
 		// Create a new DataChannel with label and options
-		APISET().AddRTFunc<2>("create", &Manager::Create);
+		APISET().AddRTFunc<6>("create", &Manager::Create);
 		// Set default ICE servers/options
 		APISET().AddRTFunc<1>("setDefaultOptions", &Manager::SetDefaultOptions);
 		APISET().AddClass<0, DataChannel>("DataChannel");
@@ -58,8 +62,16 @@ class Manager : public Singleton<Manager> {
 
 public:
 	void SetModule(X::Value curModule) { m_curModule = curModule; }
-	X::Value Create(X::XRuntime *rt, X::XObj *pContext, std::string label, X::Value options);
+	X::Value Create(X::XRuntime *rt, X::XObj *pContext, std::string label, X::Value options,
+	                X::Value LocalDescriptionCallback, X::Value LocalCandidateCallback,
+	                X::Value StateChangeCallback, X::Value GatheringStateChangeCallback);
 	void SetDefaultOptions(X::XRuntime *rt, X::XObj *pContext, X::Value options);
+
+private:
+	X::Value m_LocalDescriptionCallback;
+	X::Value m_LocalCandidateCallback;
+	X::Value m_StateChangeCallback;
+	X::Value m_GatheringStateChangeCallback;
 };
 
 } // namespace LibDataChannel

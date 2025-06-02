@@ -12,11 +12,11 @@ void DataChannel::Set(std::shared_ptr<rtc::PeerConnection> pc,
 	m_pc = pc;
 	m_dc = dc;
 
-	/* capture the SDP as soon as libdatachannel produces it */
-	m_pc->onLocalDescription([this](rtc::Description desc) {
-		m_cachedLocalSDP = std::string(desc);                          // SDP text
-		m_cachedSDPType = rtc::Description::typeToString(desc.type()); // "offer"/"answer"
-	});
+	///* capture the SDP as soon as libdatachannel produces it */
+	//m_pc->onLocalDescription([this](rtc::Description desc) {
+	//	m_cachedLocalSDP = std::string(desc);                          // SDP text
+	//	m_cachedSDPType = rtc::Description::typeToString(desc.type()); // "offer"/"answer"
+	//});
 
 	m_dc->onMessage([this](rtc::message_variant message) {
 		if (!m_messageCallback.IsObject())
@@ -52,7 +52,18 @@ bool DataChannel::Send(const std::string &message) {
 	m_dc->send(message);
 	return true;
 }
-
+bool DataChannel::SetRemoteDescription(const std::string &sdp) {
+	if (!m_pc)
+		return false;
+	m_pc->setRemoteDescription(sdp+"\r\n");
+	return true;
+}
+bool DataChannel::AddRemoteCandidate(const std::string &candidate) {
+	if (!m_pc)
+		return false;
+	m_pc->addRemoteCandidate(candidate);
+	return true;
+}
 void DataChannel::Close() {
 	if (m_dc) {
 		m_dc->close();
@@ -79,7 +90,14 @@ X::Value DataChannel::LocalDescription()
 }
 
 // Manager implementation
-X::Value Manager::Create(X::XRuntime *rt, X::XObj *pContext, std::string label, X::Value options) {
+X::Value Manager::Create(X::XRuntime *rt, X::XObj *pContext, std::string label, X::Value options,
+                         X::Value LocalDescriptionCallback, X::Value LocalCandidateCallback,
+                         X::Value StateChangeCallback, X::Value GatheringStateChangeCallback) {
+	m_LocalDescriptionCallback = LocalDescriptionCallback;
+	m_LocalCandidateCallback = LocalCandidateCallback;
+	m_StateChangeCallback = StateChangeCallback;
+	m_GatheringStateChangeCallback = GatheringStateChangeCallback;
+
 	rtc::Configuration config;
 
 	// If options is a dict, use its methods
@@ -107,6 +125,40 @@ X::Value Manager::Create(X::XRuntime *rt, X::XObj *pContext, std::string label, 
 	}
 
 	auto pc = std::make_shared<rtc::PeerConnection>(config);
+
+	/* capture the SDP as soon as libdatachannel produces it */
+	pc->onLocalDescription([this](rtc::Description desc) {
+		if (!m_LocalDescriptionCallback.IsObject())
+			return;
+		X::ARGS args(1);
+		args.push_back(X::Value(desc));
+		m_LocalDescriptionCallback.ObjCall(args);
+	});
+	pc->onLocalCandidate([this](rtc::Candidate candidate) {
+		if (!m_LocalCandidateCallback.IsObject())
+			return;
+		X::ARGS args(1);
+		args.push_back(X::Value(candidate));
+		m_LocalCandidateCallback.ObjCall(args);
+	});
+	pc->onStateChange([this](rtc::PeerConnection::State state) {
+		if (!m_StateChangeCallback.IsObject())
+			return;
+		char buf[20];
+		sprintf(buf, "%d", state);
+		X::ARGS args(1);
+		args.push_back(X::Value(buf));
+		m_StateChangeCallback.ObjCall(args);
+	});
+	pc->onGatheringStateChange([this](rtc::PeerConnection::GatheringState state) {
+		if (!m_GatheringStateChangeCallback.IsObject())
+			return;
+		char buf[20];
+		sprintf(buf, "%d", state);
+		X::ARGS args(1);
+		args.push_back(X::Value(buf));
+		m_GatheringStateChangeCallback.ObjCall(args);
+	});
 	auto dc = pc->createDataChannel(label);
 
 	X::XPackageValue<DataChannel> valDC;
